@@ -88,6 +88,56 @@
             </section>
         </main>
 
+        <!-- Biometric / Identification Modal -->
+        <div id="biometric-modal" class="modal-overlay hidden">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <i data-lucide="fingerprint" class="modal-icon"></i>
+                    <h2 id="modal-title">Identificação Biométrica</h2>
+                    <button id="close-modal-btn" class="close-btn">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="select-colaborador-group">
+                        <label for="colaborador-select">Selecione ou identifique o Colaborador:</label>
+                        <select id="colaborador-select" class="form-select">
+                            <option value="">Carregando colaboradores...</option>
+                        </select>
+                    </div>
+
+                    <div class="biometric-scanner-box">
+                        <div id="scanner-icon-container" class="scanner-icon-wrapper pulse-animation">
+                            <i data-lucide="fingerprint" class="scanner-icon"></i>
+                        </div>
+                        <p id="biometric-status-text">Aguardando posicionamento do dedo no leitor...</p>
+                    </div>
+
+                    <div id="biometric-alert" class="alert-box hidden"></div>
+                </div>
+
+                <div class="modal-footer">
+                    <button id="cancel-biometric-btn" class="btn btn-secondary">Cancelar</button>
+                    <button id="confirm-biometric-btn" class="btn btn-primary">
+                        <i data-lucide="scan"></i> Confirmar Leitura Biométrica
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Punch Toast/Notification Modal -->
+        <div id="success-toast" class="toast-overlay hidden">
+            <div class="toast-card">
+                <i data-lucide="check-circle-2" class="toast-icon"></i>
+                <div class="toast-content">
+                    <h3 id="toast-title">Ponto Registrado com Sucesso!</h3>
+                    <p id="toast-colaborador">Colaborador: ---</p>
+                    <p id="toast-time">Horário: ---</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Footer -->
         <footer class="app-footer">
             <div class="footer-info">
@@ -100,6 +150,7 @@
 
     <!-- Scripts -->
     <script src="js/supabaseClient.js"></script>
+    <script src="js/biometrics.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

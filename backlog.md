@@ -28,17 +28,17 @@ Este documento detalha as etapas, requisitos e sub-tarefas para o desenvolviment
 ---
 
 ## 🔐 Fase 2: Autenticação de Colaborador e Registro de Batimento
-- [ ] **2.1. Interface do Relógio de Ponto**
+- [X] **2.1. Interface do Relógio de Ponto**
   - Exibir relógio em tempo real com data, hora e fuso horário.
   - Apresentar opções para os 4 tipos de batimentos diários:
     1. Entrada no Expediente
     2. Saída para Intervalo/Almoço
     3. Retorno do Intervalo/Almoço
     4. Saída do Expediente
-- [ ] **2.2. Integração com Biometria WebAuthn (`navigator.credentials`)**
+- [X] **2.2. Integração com Biometria WebAuthn (`navigator.credentials`)**
   - Implementar captura de biometria via API WebAuthn.
   - Validar a identificação do colaborador a partir do hash cadastrado.
-- [ ] **2.3. Registro dos Batimentos no Banco de Dados**
+- [X] **2.3. Registro dos Batimentos no Banco de Dados**
   - Persistir dados do batimento na tabela `registro_ponto`.
   - Vincular colaborador, tipo de batimento, timestamp e método de autenticação (`BIOMETRIA`).
 
