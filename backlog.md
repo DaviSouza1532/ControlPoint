@@ -35,70 +35,56 @@ Este documento detalha as etapas, requisitos e sub-tarefas para o desenvolviment
     2. Saída para Intervalo/Almoço
     3. Retorno do Intervalo/Almoço
     4. Saída do Expediente
-- [X] **2.2. Integração com Biometria WebAuthn (`navigator.credentials`)**
-  - Implementar captura de biometria via API WebAuthn.
-  - Validar a identificação do colaborador a partir do hash cadastrado.
-- [X] **2.3. Registro dos Batimentos no Banco de Dados**
+- [X] **2.2. Integração com Biometria WebAuthn (`navigator.credentials`) e Sensor Biométrico**
+  - Implementar captura e cadastro de biometria via WebAuthn e simulação de leitor biométrico.
+  - Validar a identificação do colaborador.
+- [/] **2.3. Autenticação por PIS/CPF + Senha (Desktop / Estações de Trabalho)**
+  - Implementar aba/fluxo de login por PIS + Senha na interface de registro.
+  - Validar credenciais na tabela `colaborador`.
+- [X] **2.4. Registro dos Batimentos no Banco de Dados**
   - Persistir dados do batimento na tabela `registro_ponto`.
-  - Vincular colaborador, tipo de batimento, timestamp e método de autenticação (`BIOMETRIA`).
+  - Vincular colaborador, tipo de batimento, timestamp e método de autenticação.
 
 ---
 
-## 🛡️ Fase 3: Contingência, Leitor RFID e Validação por Supervisor
-- [ ] **3.1. Leitura Transparentemente via RFID/Cartão Magnético (HID)**
-  - Escutar eventos globais de teclado para captura de códigos de leitores de cartão RFID.
-  - Identificar o colaborador pelo `codigo_cartao`.
-- [ ] **3.2. Fluxo de Senha e Validação do Supervisor**
-  - Exigir senha e aprovação de um colaborador com perfil `e_supervisor = true` após uso do cartão ou falha biométrica (> 3 tentativas).
-  - Registrar no batimento o método `CARTAO_SUPERVISOR` e o ID do supervisor aprovador.
-- [ ] **3.3. Alerta de Uso de Contingência**
-  - Registrar alerta no sistema/painel do RH sobre marcações efetuadas via contingência.
+## 🧾 Fase 3: Ticket Virtual (Comprovante) e Impressão Térmica
+- [/] **3.1. Modal do Ticket Virtual de Ponto**
+  - Exibir comprovante em modal logo após o batimento.
+  - Incluir dados da Empresa (Razão Social, CNPJ, Endereço), Colaborador (Nome, PIS, Cargo, Função), Turno, Horário do Batimento, Batimentos do dia e Hash de integridade.
+- [/] **3.2. Ações do Comprovante (Imprimir, Enviar por E-mail, Salvar)**
+  - Implementar impressão física via `window.print()` estilizado com CSS `@media print` para cupom de 80mm.
+  - Opção de envio digital por e-mail e download/salvamento do comprovante.
+  - Gravar dados na tabela `ticket_comprovante`.
 
 ---
 
-## 📶 Fase 4: Offline-First, IndexedDB e PWA
-- [ ] **4.1. Configuração do Service Worker e Cache Estático**
-  - Criar `sw.js` e registrar o Service Worker para cache offline de HTML, CSS, JS e Ícones.
-  - Garantir carregamento da aplicação sem conectividade de rede.
-- [ ] **4.2. Persistência Local via IndexedDB**
-  - Estruturar banco local no IndexedDB para armazenamento dos batimentos realizados offline.
-  - Gerar IDs UUIDv4 para batimentos offline evitando conflitos de sincronização.
-- [ ] **4.3. Detecção e Notificações da Rede (`navigator.onLine`)**
-  - Exibir banner/notificação visual de perda de conexão ao ficar offline.
-  - Disparar evento de reconexão (`online`) para acionar sincronização.
-- [ ] **4.4. Sincronização e Validação Temporal/Duplicidade**
-  - Criar rotina de sincronização do lote acumulado no IndexedDB com o Supabase.
-  - Executar verificação anti-duplicidade e coerência de timestamps antes da persistência no servidor.
+## ⚠️ Fase 4: Anomalias, Tolerâncias de Turno e Justificativas
+- [/] **4.1. Cálculo de Tolerância de Turno**
+  - Comparar horário do batimento com o turno cadastrado (`horario_entrada`, `horario_saida`, etc.) considerando `tolerancia_minutos`.
+- [/] **4.2. Captura Obrigatoria de Justificativa**
+  - Exibir modal exigindo justificativa textual ao detectar atraso ou saída antecipada fora da tolerância.
+  - Salvar ocorrência na tabela `justificativa_ocorrencia`.
 
 ---
 
-## 🧾 Fase 5: Comprovante de Ponto (Ticket) e Envio Digital
-- [ ] **5.1. Geração do Ticket de Comprovante**
-  - Gerar Hash de Autenticação único para cada batimento.
-  - Montar layout do comprovante com dados da Empresa, Colaborador, Turno, Horário e Hash.
-  - Salvar histórico na tabela `ticket_comprovante`.
-- [ ] **5.2. Impressão Térmica (`window.print()`)**
-  - Adicionar folha de estilo CSS `@media print` para formatação em cupons térmicos.
-  - Exibir notificação visual em caso de falha de hardware/impressora com opção de tentar novamente.
-- [ ] **5.3. Envio por E-mail do Ticket Digital**
-  - Integrar opção de envio automático do ticket por e-mail (via Edge Function ou serviço REST).
+## 📶 Fase 5: Offline-First, IndexedDB e Service Worker PWA
+- [/] **5.1. Armazenamento Local via IndexedDB (`js/offlineStore.js`)**
+  - Guardar batimentos offline localmente no IndexedDB utilizando UUIDv4.
+- [/] **5.2. Service Worker e Cache Estático (`sw.js`)**
+  - Pré-cachear arquivos estáticos (`index.html`, `styles.css`, `js/*.js`) para funcionamento offline total.
+- [/] **5.3. Sincronização Automática ao Reconectar**
+  - Monitorar evento `online` para sincronizar lote offline com o Supabase com validação anti-duplicidade.
 
 ---
 
-## ⚠️ Fase 6: Gestão de Anomalias, Tolerâncias e Justificativas
-- [ ] **6.1. Cálculo de Atrasos e Saídas Antecipadas**
-  - Comparar horário do batimento com o turno configurado na tabela `turno`, considerando a tolerância cadastrada (`tolerancia_minutos`).
-- [ ] **6.2. Captura de Justificativa Textual**
-  - Exibir modal solicitando justificativa quando for detectado atraso ou saída antecipada fora da tolerância.
-  - Gravar ocorrência na tabela `justificativa_ocorrencia`.
-- [ ] **6.3. Marcação e Anexo de Atestados (Faltas)**
-  - Permitir upload de atestados (PDF/Imagem) salvos no Supabase Storage para abono de faltas/atrasos.
-  - Agendar/registrar falta automática quando o expediente encerrar sem batimento e sem justificativa.
+## 🛡️ Fase 6: Contingência e Leitor RFID
+- [ ] **6.1. Captura de Cartão RFID/Magnético (HID)**
+  - Eventos de teclado para captura transparente de cartão magnético.
+- [ ] **6.2. Aprovação por Supervisor**
+  - Exigir validação por supervisor após falhas consecutivas ou uso de contingência.
 
 ---
 
-## 📊 Fase 7: Painel do RH / Auditoria
+## 📊 Fase 7: Painel do RH e Auditoria
 - [ ] **7.1. Visualização de Ocorrências e Relatórios de Ponto**
-  - Listar batimentos, divergências, ocorrências e alertas de contingência.
-- [ ] **7.2. Aprovação de Justificativas e Atestados**
-  - Permitir ao supervisor/RH aprovar justificativas e anexos de atestados.
+  - Painel com relatório de registros, atrasos e justificativas.

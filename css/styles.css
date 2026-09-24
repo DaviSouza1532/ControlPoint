@@ -231,8 +231,8 @@ body {
 
 .actions-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.25rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
     flex: 1;
 }
 
@@ -242,19 +242,23 @@ body {
     justify-content: center;
     align-items: center;
     gap: 1rem;
-    padding: 1.5rem;
+    padding: 1.75rem 1.5rem;
     border-radius: var(--radius-lg);
     border: 2px solid var(--border-color);
     background-color: var(--bg-card);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .action-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px -2px rgba(37, 99, 235, 0.12);
     border-color: var(--primary);
     background-color: var(--primary-light);
+}
+
+.action-btn:active {
+    transform: translateY(0);
 }
 
 .btn-icon {
@@ -292,7 +296,7 @@ body {
     background-color: var(--bg-card);
     border-radius: var(--radius-lg);
     width: 100%;
-    max-width: 520px;
+    max-width: 540px;
     box-shadow: var(--shadow-lg);
     overflow: hidden;
     animation: modalAppear 0.2s ease-out;
@@ -323,6 +327,10 @@ body {
     color: var(--primary);
 }
 
+.text-warning {
+    color: var(--warning) !important;
+}
+
 .modal-header h2 {
     font-size: 1.25rem;
     font-weight: 600;
@@ -345,6 +353,40 @@ body {
     color: var(--text-primary);
 }
 
+/* Modal Tabs */
+.modal-tabs {
+    display: flex;
+    background-color: var(--bg-main);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-tab {
+    flex: 1;
+    padding: 0.875rem 1rem;
+    border: none;
+    background: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+}
+
+.modal-tab:hover {
+    color: var(--primary);
+}
+
+.modal-tab.active-tab {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    background-color: var(--bg-card);
+}
+
 .modal-body {
     padding: 1.5rem;
     display: flex;
@@ -352,19 +394,19 @@ body {
     gap: 1.25rem;
 }
 
-.select-colaborador-group {
+.form-group {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 }
 
-.select-colaborador-group label {
+.form-group label, .select-colaborador-group label {
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--text-secondary);
 }
 
-.form-select {
+.form-input, .form-select, .form-textarea {
     padding: 0.75rem 1rem;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
@@ -374,9 +416,21 @@ body {
     outline: none;
 }
 
-.form-select:focus {
+.form-textarea {
+    resize: vertical;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.form-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
 }
 
 .biometric-scanner-box {
@@ -443,6 +497,18 @@ body {
     border: 1px solid var(--danger);
 }
 
+.alert-warning {
+    background-color: var(--warning-bg);
+    color: var(--warning);
+    border: 1px solid var(--warning);
+}
+
+.alert-success {
+    background-color: var(--success-bg);
+    color: var(--success);
+    border: 1px solid var(--success);
+}
+
 .modal-footer {
     padding: 1rem 1.5rem;
     background-color: var(--bg-main);
@@ -462,7 +528,6 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-
 }
 
 .btn-secondary {
@@ -482,6 +547,72 @@ body {
 
 .btn-primary:hover {
     background-color: var(--primary-hover);
+}
+
+/* Ticket Receipt Box */
+.modal-ticket-card {
+    max-width: 480px;
+}
+
+.ticket-receipt {
+    background-color: #FAFAFA;
+    border: 1px dashed #D4D4D8;
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    font-family: "Courier New", Courier, monospace;
+    color: #18181B;
+    font-size: 0.875rem;
+}
+
+.ticket-header {
+    text-align: center;
+}
+
+.ticket-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.ticket-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
+.ticket-divider {
+    border: none;
+    border-top: 1px dashed #A1A1AA;
+    margin: 0.75rem 0;
+}
+
+.ticket-section p {
+    margin-bottom: 0.35rem;
+}
+
+.ticket-punches-list {
+    list-style: none;
+    padding-left: 0.5rem;
+}
+
+.ticket-punches-list li {
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+}
+
+.ticket-footer {
+    text-align: center;
+}
+
+.hash-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.hash-code {
+    font-size: 0.75rem;
+    word-break: break-all;
+    color: var(--text-primary);
 }
 
 /* Toast Success */
@@ -550,6 +681,39 @@ body {
     width: 16px;
     height: 16px;
     vertical-align: middle;
+}
+
+/* Impressão Térmica @media print */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .no-print {
+        display: none !important;
+    }
+    #virtual-ticket-content, #virtual-ticket-content * {
+        visibility: visible;
+    }
+    #ticket-modal {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: none !important;
+        backdrop-filter: none !important;
+    }
+    .modal-card {
+        box-shadow: none !important;
+        border: none !important;
+        width: 100% !important;
+        max-width: 80mm !important; /* Tamanho do cupom térmico */
+    }
+    .ticket-receipt {
+        border: none !important;
+        background: #fff !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
 }
 
 /* Responsividade Mínima para Tablet (Landscape) e Desktop */

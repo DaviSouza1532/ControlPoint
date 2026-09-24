@@ -88,30 +88,57 @@
             </section>
         </main>
 
-        <!-- Biometric / Identification Modal -->
+        <!-- Identification Modal (Biometrics & PIS/Password) -->
         <div id="biometric-modal" class="modal-overlay hidden">
             <div class="modal-card">
                 <div class="modal-header">
-                    <i data-lucide="fingerprint" class="modal-icon"></i>
-                    <h2 id="modal-title">Identificação Biométrica</h2>
+                    <i data-lucide="shield-check" class="modal-icon"></i>
+                    <h2 id="modal-title">Identificação para Registro</h2>
                     <button id="close-modal-btn" class="close-btn">
                         <i data-lucide="x"></i>
                     </button>
                 </div>
 
+                <!-- Tab Controls -->
+                <div class="modal-tabs">
+                    <button id="tab-biometry-btn" class="modal-tab active-tab">
+                        <i data-lucide="fingerprint"></i> Biometria / Leitor
+                    </button>
+                    <button id="tab-password-btn" class="modal-tab">
+                        <i data-lucide="key-round"></i> PIS / CPF + Senha
+                    </button>
+                </div>
+
                 <div class="modal-body">
-                    <div class="select-colaborador-group">
-                        <label for="colaborador-select">Selecione o Colaborador:</label>
-                        <select id="colaborador-select" class="form-select">
-                            <option value="">Carregando colaboradores...</option>
-                        </select>
+                    <!-- Tab Content 1: Biometry -->
+                    <div id="tab-biometry-content" class="tab-content">
+                        <div class="select-colaborador-group">
+                            <label for="colaborador-select">Selecione o Colaborador:</label>
+                            <select id="colaborador-select" class="form-select">
+                                <option value="">Carregando colaboradores...</option>
+                            </select>
+                        </div>
+
+                        <div class="biometric-scanner-box">
+                            <div id="scanner-icon-container" class="scanner-icon-wrapper pulse-animation">
+                                <i data-lucide="fingerprint" class="scanner-icon"></i>
+                            </div>
+                            <p id="biometric-status-text">Posicione o dedo no leitor biométrico...</p>
+                        </div>
                     </div>
 
-                    <div class="biometric-scanner-box">
-                        <div id="scanner-icon-container" class="scanner-icon-wrapper pulse-animation">
-                            <i data-lucide="fingerprint" class="scanner-icon"></i>
+                    <!-- Tab Content 2: Password Access -->
+                    <div id="tab-password-content" class="tab-content hidden">
+                        <div class="form-group">
+                            <label for="input-pis">PIS / CPF do Colaborador:</label>
+                            <input type="text" id="input-pis" class="form-input" placeholder="Digite seu PIS ou CPF (ex: 123.45678.90-1)">
                         </div>
-                        <p id="biometric-status-text">Posicione o dedo no leitor biométrico...</p>
+
+                        <div class="form-group">
+                            <label for="input-password">Senha de Acesso:</label>
+                            <input type="password" id="input-password" class="form-input" placeholder="Digite sua senha de acesso">
+                        </div>
+                        <p class="form-hint"><i data-lucide="info"></i> Para o primeiro acesso em computador, use a senha padrão de cadastro (123456).</p>
                     </div>
 
                     <div id="biometric-alert" class="alert-box hidden"></div>
@@ -123,13 +150,105 @@
                         <i data-lucide="key-round"></i> Cadastrar Passkey
                     </button>
                     <button id="confirm-biometric-btn" class="btn btn-primary">
-                        <i data-lucide="scan"></i> Confirmar Leitura Biométrica
+                        <i data-lucide="check"></i> Confirmar Batimento
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Success Punch Toast/Notification Modal -->
+        <!-- Shift Justification Modal -->
+        <div id="justification-modal" class="modal-overlay hidden">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <i data-lucide="alert-triangle" class="modal-icon text-warning"></i>
+                    <h2>Justificativa de Ocorrência</h2>
+                </div>
+                <div class="modal-body">
+                    <div id="justification-info-box" class="alert-box alert-warning">
+                        <strong>Horário fora da tolerância do turno!</strong>
+                        <p id="justification-reason-text">Atraso ou saída antecipada detectada.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="input-justification-text">Por favor, descreva o motivo:</label>
+                        <textarea id="input-justification-text" class="form-textarea" rows="4" placeholder="Informe a justificativa para o RH..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="submit-justification-btn" class="btn btn-primary">
+                        <i data-lucide="send"></i> Salvar e Registrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Virtual Ticket Modal -->
+        <div id="ticket-modal" class="modal-overlay hidden">
+            <div class="modal-card modal-ticket-card">
+                <div class="modal-header no-print">
+                    <i data-lucide="receipt" class="modal-icon"></i>
+                    <h2>Comprovante de Registro (Ticket Virtual)</h2>
+                    <button id="close-ticket-btn" class="close-btn">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- Ticket Receipt Box -->
+                    <div id="virtual-ticket-content" class="ticket-receipt">
+                        <div class="ticket-header">
+                            <h3 id="ticket-empresa-nome">EMPRESA EXEMPLO S.A.</h3>
+                            <p id="ticket-empresa-cnpj">CNPJ: 00.000.000/0001-00</p>
+                            <p id="ticket-empresa-endereco">Rua Comercial, 100 - Centro</p>
+                            <hr class="ticket-divider">
+                            <h4 class="ticket-title">COMPROVANTE DE REGISTRO DE PONTO</h4>
+                            <hr class="ticket-divider">
+                        </div>
+
+                        <div class="ticket-section">
+                            <p><strong>COLABORADOR:</strong> <span id="ticket-colaborador-nome">---</span></p>
+                            <p><strong>PIS:</strong> <span id="ticket-colaborador-pis">---</span></p>
+                            <p><strong>CARGO:</strong> <span id="ticket-colaborador-cargo">---</span></p>
+                        </div>
+                        <hr class="ticket-divider">
+
+                        <div class="ticket-section">
+                            <p><strong>TIPO REGISTRO:</strong> <span id="ticket-tipo-batimento">---</span></p>
+                            <p><strong>DATA / HORA:</strong> <span id="ticket-timestamp">---</span></p>
+                            <p><strong>MÉTODO AUTH:</strong> <span id="ticket-metodo">---</span></p>
+                        </div>
+                        <hr class="ticket-divider">
+
+                        <div class="ticket-section">
+                            <p><strong>REGISTROS DO DIA:</strong></p>
+                            <ul id="ticket-today-punches-list" class="ticket-punches-list">
+                                <li>Sem registros anteriores</li>
+                            </ul>
+                        </div>
+                        <hr class="ticket-divider">
+
+                        <div class="ticket-footer">
+                            <p class="hash-label">HASH DE AUTENTICAÇÃO:</p>
+                            <p id="ticket-hash" class="hash-code">00000000000000000000000000000000</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer no-print">
+                    <button id="print-ticket-btn" class="btn btn-secondary">
+                        <i data-lucide="printer"></i> Imprimir Ticket
+                    </button>
+                    <button id="email-ticket-btn" class="btn btn-secondary">
+                        <i data-lucide="mail"></i> Enviar E-mail
+                    </button>
+                    <button id="finish-ticket-btn" class="btn btn-primary">
+                        <i data-lucide="check-circle-2"></i> Concluir
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Toast Notification -->
         <div id="success-toast" class="toast-overlay hidden">
             <div class="toast-card">
                 <i data-lucide="check-circle-2" class="toast-icon"></i>
@@ -154,6 +273,18 @@
     <!-- Scripts -->
     <script src="js/supabaseClient.js"></script>
     <script src="js/biometrics.js"></script>
+    <script src="js/offlineStore.js"></script>
     <script src="js/app.js"></script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registrado com sucesso:', reg.scope))
+                    .catch(err => console.warn('Falha ao registrar Service Worker:', err));
+            });
+        }
+    </script>
 </body>
 </html>
