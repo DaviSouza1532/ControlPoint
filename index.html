@@ -101,7 +101,7 @@
 
                 <div class="modal-body">
                     <div class="select-colaborador-group">
-                        <label for="colaborador-select">Selecione ou identifique o Colaborador:</label>
+                        <label for="colaborador-select">Selecione o Colaborador:</label>
                         <select id="colaborador-select" class="form-select">
                             <option value="">Carregando colaboradores...</option>
                         </select>
@@ -111,7 +111,7 @@
                         <div id="scanner-icon-container" class="scanner-icon-wrapper pulse-animation">
                             <i data-lucide="fingerprint" class="scanner-icon"></i>
                         </div>
-                        <p id="biometric-status-text">Aguardando posicionamento do dedo no leitor...</p>
+                        <p id="biometric-status-text">Posicione o dedo no leitor biométrico...</p>
                     </div>
 
                     <div id="biometric-alert" class="alert-box hidden"></div>
@@ -119,6 +119,9 @@
 
                 <div class="modal-footer">
                     <button id="cancel-biometric-btn" class="btn btn-secondary">Cancelar</button>
+                    <button id="register-passkey-btn" class="btn btn-secondary">
+                        <i data-lucide="key-round"></i> Cadastrar Passkey
+                    </button>
                     <button id="confirm-biometric-btn" class="btn btn-primary">
                         <i data-lucide="scan"></i> Confirmar Leitura Biométrica
                     </button>

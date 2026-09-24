@@ -113,20 +113,16 @@ async function loadColaboradores() {
         const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
         if (!client) return;
 
-        const { data, error } = await client.from('colaborador').select('id, nome, pis, cargo, hash_biometria').eq('ativo', true);
+        const { data, error } = await client.from('colaborador').select('id, nome, pis, cargo, email, hash_biometria').eq('ativo', true);
 
-        if (error) {
-            console.warn('Não foi possível carregar colaboradores do Supabase:', error);
-            // Dados fallback para teste visual caso banco esteja vazio
+        if (error || !data || data.length === 0) {
+            console.warn('Usando colaboradores de demonstração (tabela vazia ou erro):', error);
             colaboradoresList = [
-                { id: '11111111-1111-1111-1111-111111111111', nome: 'Carlos Silva (Demonstração)', pis: '123.45678.90-1', cargo: 'Analista', hash_biometria: 'HASH_DEMO_1' }
+                { id: '11111111-1111-1111-1111-111111111111', nome: 'Carlos Silva (Demonstração)', pis: '123.45678.90-1', cargo: 'Analista', email: 'carlos@empresa.com' },
+                { id: '22222222-2222-2222-2222-222222222222', nome: 'Ana Souza (Demonstração)', pis: '987.65432.10-9', cargo: 'Desenvolvedora', email: 'ana@empresa.com' }
             ];
-        } else if (data && data.length > 0) {
-            colaboradoresList = data;
         } else {
-            colaboradoresList = [
-                { id: '11111111-1111-1111-1111-111111111111', nome: 'Carlos Silva (Demonstração)', pis: '123.45678.90-1', cargo: 'Analista', hash_biometria: 'HASH_DEMO_1' }
-            ];
+            colaboradoresList = data;
         }
 
         if (select) {
@@ -200,16 +196,61 @@ function setupModalEvents() {
     const closeBtn = document.getElementById('close-modal-btn');
     const cancelBtn = document.getElementById('cancel-biometric-btn');
     const confirmBtn = document.getElementById('confirm-biometric-btn');
+    const registerPasskeyBtn = document.getElementById('register-passkey-btn');
 
     if (closeBtn) closeBtn.addEventListener('click', closeBiometricModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeBiometricModal);
 
     if (confirmBtn) {
-        confirmBtn.addEventListener('click', processBiometricClockIn);
+        confirmBtn.addEventListener('click', () => processBiometricClockIn(false));
+    }
+
+    if (registerPasskeyBtn) {
+        registerPasskeyBtn.addEventListener('click', handleRegisterPasskey);
     }
 }
 
-async function processBiometricClockIn() {
+async function handleRegisterPasskey() {
+    const select = document.getElementById('colaborador-select');
+    const alertBox = document.getElementById('biometric-alert');
+    const statusText = document.getElementById('biometric-status-text');
+
+    const colaboradorId = select ? select.value : null;
+
+    if (!colaboradorId) {
+        if (alertBox) {
+            alertBox.className = 'alert-box alert-danger';
+            alertBox.textContent = 'Selecione um colaborador antes de cadastrar a chave Passkey.';
+            alertBox.classList.remove('hidden');
+        }
+        return;
+    }
+
+    const colaborador = colaboradoresList.find(c => c.id === colaboradorId);
+
+    if (statusText) {
+        statusText.textContent = 'Siga as instruções do dispositivo para cadastrar a digital/Passkey...';
+    }
+
+    const res = await window.biometricService.registerPasskey(colaborador);
+
+    if (res.success) {
+        if (alertBox) {
+            alertBox.className = 'alert-box alert-success';
+            alertBox.textContent = res.message;
+            alertBox.classList.remove('hidden');
+        }
+        if (statusText) statusText.textContent = 'Passkey cadastrada! Agora você pode bater o ponto.';
+    } else {
+        if (alertBox) {
+            alertBox.className = 'alert-box alert-danger';
+            alertBox.textContent = res.error;
+            alertBox.classList.remove('hidden');
+        }
+    }
+}
+
+async function processBiometricClockIn(useNativeWebAuthn = false) {
     const select = document.getElementById('colaborador-select');
     const statusText = document.getElementById('biometric-status-text');
     const alertBox = document.getElementById('biometric-alert');
@@ -220,7 +261,7 @@ async function processBiometricClockIn() {
     if (!colaboradorId) {
         if (alertBox) {
             alertBox.className = 'alert-box alert-danger';
-            alertBox.textContent = 'Por favor, selecione um colaborador para a leitura.';
+            alertBox.textContent = 'Por favor, selecione um colaborador para realizar o batimento.';
             alertBox.classList.remove('hidden');
         }
         return;
@@ -229,33 +270,35 @@ async function processBiometricClockIn() {
     const colaborador = colaboradoresList.find(c => c.id === colaboradorId);
 
     if (statusText) {
-        statusText.textContent = 'Lendo impressão digital... Mantenha o dedo no leitor.';
+        statusText.textContent = 'Lendo impressão digital... Mantenha o dedo no sensor.';
     }
 
     if (confirmBtn) confirmBtn.disabled = true;
 
     try {
-        const result = await window.biometricService.authenticateColaborador(colaborador);
+        const result = await window.biometricService.authenticateColaborador(colaborador, useNativeWebAuthn);
 
         if (result.success) {
-            if (statusText) statusText.textContent = 'Biometria confirmada! Salvando batimento...';
+            if (statusText) statusText.textContent = 'Biometria identificada com sucesso! Registrando...';
 
-            // Registra o batimento no Supabase
-            await savePunchRecord(colaborador, selectedActionType, 'BIOMETRIA');
+            await savePunchRecord(colaborador, selectedActionType, result.method || 'BIOMETRIA');
 
             closeBiometricModal();
             showSuccessToast(colaborador, selectedActionType);
+        } else if (result.passkeyMissing) {
+            if (alertBox) {
+                alertBox.className = 'alert-box alert-warning';
+                alertBox.textContent = result.error;
+                alertBox.classList.remove('hidden');
+            }
+            if (statusText) statusText.textContent = 'Use a leitura biométrica do leitor ou cadastre uma Passkey.';
         } else {
             if (alertBox) {
                 alertBox.className = 'alert-box alert-danger';
                 alertBox.textContent = `${result.error} Tentativas restantes: ${result.attemptsRemaining}`;
                 alertBox.classList.remove('hidden');
             }
-            if (statusText) statusText.textContent = 'Falha na leitura. Tente novamente.';
-
-            if (result.attemptsRemaining <= 0) {
-                alertBox.textContent = 'Limite de tentativas excedido! Contingência via cartão/supervisor recomendada.';
-            }
+            if (statusText) statusText.textContent = 'Falha na leitura biométrica. Tente novamente.';
         }
     } catch (err) {
         console.error('Erro no processamento da biometria:', err);
@@ -279,7 +322,7 @@ async function savePunchRecord(colaborador, actionType, authMethod) {
                     colaborador_id: colaborador.id,
                     timestamp_registro: nowISO,
                     tipo_batimento: actionType,
-                    metodo_autenticacao: authMethod,
+                    metodo_autenticacao: authMethod === 'WEBAUTHN' ? 'BIOMETRIA' : 'BIOMETRIA',
                     sincronizado_offline: false
                 }
             ]);
