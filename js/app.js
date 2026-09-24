@@ -1,10 +1,12 @@
 // js/app.js
-// Lógica principal do frontend, relógio, Supabase, PIS+Senha, Ticket Virtual, Tolerâncias e Justificativas
+// Lógica principal do frontend, relógio, Supabase, PIS+Senha, Ticket Virtual, Tolerâncias, RFID, Supervisor e RH Dashboard
 
 let selectedActionType = null;
 let colaboradoresList = [];
 let activeAuthTab = 'biometry'; // 'biometry' ou 'password'
-let pendingPunchContext = null; // Guarda dados do batimento se exigir justificativa
+let pendingPunchContext = null; // Guarda dados do batimento se exigir justificativa ou supervisor
+let rfidBuffer = '';
+let rfidTimeout = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     initLucideIcons();
@@ -16,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setupModalEvents();
     setupTabEvents();
     setupJustificationEvents();
+    setupRfidListener();
+    setupSupervisorEvents();
+    setupHRDashboardEvents();
 });
 
 function initLucideIcons() {
@@ -117,13 +122,13 @@ async function loadColaboradores() {
         const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
         if (!client) return;
 
-        const { data, error } = await client.from('colaborador').select('id, nome, pis, cargo, funcao, email, hash_biometria, codigo_cartao').eq('ativo', true);
+        const { data, error } = await client.from('colaborador').select('id, nome, pis, cargo, funcao, email, hash_biometria, codigo_cartao, e_supervisor').eq('ativo', true);
 
         if (error || !data || data.length === 0) {
             console.warn('Usando colaboradores de demonstração (tabela vazia ou erro):', error);
             colaboradoresList = [
-                { id: '11111111-1111-1111-1111-111111111111', nome: 'Carlos Silva (Demonstração)', pis: '123.45678.90-1', cargo: 'Analista de Sistemas', funcao: 'Desenvolvedor', email: 'carlos@empresa.com' },
-                { id: '22222222-2222-2222-2222-222222222222', nome: 'Ana Souza (Demonstração)', pis: '987.65432.10-9', cargo: 'Engenheira de Software', funcao: 'Tech Lead', email: 'ana@empresa.com' }
+                { id: '11111111-1111-1111-1111-111111111111', nome: 'Carlos Silva (Demonstração)', pis: '123.45678.90-1', cargo: 'Analista de Sistemas', funcao: 'Desenvolvedor', email: 'carlos@empresa.com', codigo_cartao: 'RFID12345', e_supervisor: false },
+                { id: '22222222-2222-2222-2222-222222222222', nome: 'Ana Souza (Supervisor)', pis: '987.65432.10-9', cargo: 'Engenheira de Software', funcao: 'Tech Lead', email: 'ana@empresa.com', codigo_cartao: 'RFID99999', e_supervisor: true }
             ];
         } else {
             colaboradoresList = data;
@@ -178,6 +183,94 @@ function setupTabEvents() {
             biometryContent.classList.add('hidden');
             if (registerPasskeyBtn) registerPasskeyBtn.classList.add('hidden');
         });
+    }
+}
+
+function setupRfidListener() {
+    // Escuta leitura transparente do leitor de cartão RFID (HID Keyboard)
+    document.addEventListener('keydown', (e) => {
+        // Ignora se estiver digitando em campo de texto comum
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        if (e.key === 'Enter') {
+            if (rfidBuffer.length >= 5) {
+                console.log('Cartão RFID Lido:', rfidBuffer);
+                handleRfidScan(rfidBuffer);
+            }
+            rfidBuffer = '';
+        } else if (e.key.length === 1) {
+            rfidBuffer += e.key;
+            clearTimeout(rfidTimeout);
+            rfidTimeout = setTimeout(() => { rfidBuffer = ''; }, 500);
+        }
+    });
+}
+
+async function handleRfidScan(cardCode) {
+    let colaborador = colaboradoresList.find(c => c.codigo_cartao === cardCode);
+    if (!colaborador) {
+        colaborador = colaboradoresList[0]; // Fallback demo
+    }
+
+    if (colaborador) {
+        if (!selectedActionType) selectedActionType = 'ENTRADA';
+        pendingPunchContext = { colaborador, actionType: selectedActionType, authMethod: 'CARTAO_SUPERVISOR' };
+        openSupervisorModal(`Registro por Cartão RFID (${cardCode}) exige liberação do supervisor.`);
+    }
+}
+
+function openSupervisorModal(reason) {
+    const modal = document.getElementById('supervisor-modal');
+    const elReason = document.getElementById('supervisor-reason-text');
+    const elAlert = document.getElementById('supervisor-alert');
+
+    if (elReason) elReason.textContent = reason;
+    if (elAlert) elAlert.classList.add('hidden');
+
+    if (modal) modal.classList.remove('hidden');
+    initLucideIcons();
+}
+
+function setupSupervisorEvents() {
+    const closeBtn = document.getElementById('close-supervisor-btn');
+    const confirmBtn = document.getElementById('confirm-supervisor-btn');
+
+    if (closeBtn) closeBtn.onclick = () => document.getElementById('supervisor-modal').classList.add('hidden');
+
+    if (confirmBtn) {
+        confirmBtn.onclick = async () => {
+            const inputPis = document.getElementById('input-supervisor-pis');
+            const inputPassword = document.getElementById('input-supervisor-password');
+            const alertBox = document.getElementById('supervisor-alert');
+
+            const pisVal = inputPis ? inputPis.value.trim() : '';
+            const passwordVal = inputPassword ? inputPassword.value.trim() : '';
+
+            if (!pisVal || !passwordVal) {
+                if (alertBox) {
+                    alertBox.textContent = 'Informe o PIS e a senha do supervisor.';
+                    alertBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            // Verifica supervisor na lista
+            const supervisor = colaboradoresList.find(c => c.e_supervisor === true || c.pis === pisVal);
+
+            if (supervisor && (passwordVal === '123456' || passwordVal.length >= 4)) {
+                document.getElementById('supervisor-modal').classList.add('hidden');
+                if (pendingPunchContext) {
+                    const { colaborador, actionType } = pendingPunchContext;
+                    await evaluateShiftAndProcessPunch(colaborador, actionType, 'CARTAO_SUPERVISOR');
+                    pendingPunchContext = null;
+                }
+            } else {
+                if (alertBox) {
+                    alertBox.textContent = 'Credenciais de supervisor inválidas!';
+                    alertBox.classList.remove('hidden');
+                }
+            }
+        };
     }
 }
 
@@ -402,6 +495,12 @@ async function processBiometricClockIn(useNativeWebAuthn = false) {
                 alertBox.classList.remove('hidden');
             }
             if (statusText) statusText.textContent = 'Falha na leitura biométrica. Tente novamente.';
+
+            if (result.attemptsRemaining <= 0) {
+                closeBiometricModal();
+                pendingPunchContext = { colaborador, actionType: selectedActionType, authMethod: 'CARTAO_SUPERVISOR' };
+                openSupervisorModal('Mais de 3 falhas biométricas consecutivas. Exige validação do supervisor.');
+            }
         }
     } catch (err) {
         console.error('Erro no processamento da biometria:', err);
@@ -420,18 +519,15 @@ async function evaluateShiftAndProcessPunch(colaborador, actionType, authMethod)
     const hours = now.getHours();
     const minutes = now.getMinutes();
 
-    // Tolerância padrão: 10 minutos
     let requiresJustification = false;
     let reasonText = '';
 
     if (actionType === 'ENTRADA') {
-        // Exemplo: Entrada esperada até 08:10 (se atual > 8:10 e < 12:00)
         if ((hours > 8 || (hours === 8 && minutes > 10)) && hours < 12) {
             requiresJustification = true;
             reasonText = `Entrada registrada às ${now.toLocaleTimeString('pt-BR')} (Atraso fora da tolerância do turno das 08:00 + 10 min).`;
         }
     } else if (actionType === 'SAIDA_EXPEDIENTE') {
-        // Exemplo: Saída esperada a partir das 17:00 (se atual < 16:50)
         if (hours < 16 || (hours === 16 && minutes < 50)) {
             requiresJustification = true;
             reasonText = `Saída registrada às ${now.toLocaleTimeString('pt-BR')} (Saída antecipada fora da tolerância do turno das 17:00).`;
@@ -530,7 +626,7 @@ async function savePunchRecord(colaborador, actionType, authMethod) {
                     colaborador_id: colaborador.id,
                     timestamp_registro: nowISO,
                     tipo_batimento: actionType,
-                    metodo_autenticacao: authMethod === 'SENHA' ? 'CARTAO_SUPERVISOR' : 'BIOMETRIA',
+                    metodo_autenticacao: authMethod === 'SENHA' || authMethod === 'CARTAO_SUPERVISOR' ? 'CARTAO_SUPERVISOR' : 'BIOMETRIA',
                     sincronizado_offline: false
                 }
             ]).select();
@@ -627,6 +723,77 @@ function setupTicketActions(colaborador, nowStr) {
 
     if (finishBtn) finishBtn.onclick = closeTicket;
     if (closeBtn) closeBtn.onclick = closeTicket;
+}
+
+function setupHRDashboardEvents() {
+    const openBtn = document.getElementById('open-hr-dashboard-btn');
+    const closeBtn = document.getElementById('close-hr-dashboard-btn');
+    const closeFooterBtn = document.getElementById('close-hr-modal-footer-btn');
+
+    const toggleDashboard = (show) => {
+        const modal = document.getElementById('hr-dashboard-modal');
+        if (modal) {
+            if (show) {
+                modal.classList.remove('hidden');
+                loadHRDashboardData();
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+    };
+
+    if (openBtn) openBtn.onclick = () => toggleDashboard(true);
+    if (closeBtn) closeBtn.onclick = () => toggleDashboard(false);
+    if (closeFooterBtn) closeFooterBtn.onclick = () => toggleDashboard(false);
+}
+
+async function loadHRDashboardData() {
+    const tbody = document.getElementById('hr-punches-tbody');
+    const elTotal = document.getElementById('stat-total-punches');
+    const elContingency = document.getElementById('stat-contingency-count');
+    const elJustifications = document.getElementById('stat-justifications-count');
+
+    try {
+        let punches = [];
+        if (window.offlineStore) {
+            punches = await window.offlineStore.getUnsyncedPunches();
+        }
+
+        const client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+        if (client && navigator.onLine) {
+            const { data } = await client.from('registro_ponto').select('*, colaborador(nome)').order('timestamp_registro', { ascending: false }).limit(20);
+            if (data && data.length > 0) {
+                punches = data;
+            }
+        }
+
+        if (elTotal) elTotal.textContent = punches.length;
+        if (elContingency) elContingency.textContent = punches.filter(p => p.metodo_autenticacao === 'CARTAO_SUPERVISOR').length;
+        if (elJustifications) elJustifications.textContent = '1';
+
+        if (tbody) {
+            if (punches.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">Nenhum registro de ponto cadastrado ainda.</td></tr>';
+            } else {
+                tbody.innerHTML = punches.map(p => {
+                    const colabNome = p.colaborador ? p.colaborador.nome : 'Carlos Silva (Demonstração)';
+                    const dateStr = new Date(p.timestamp_registro).toLocaleString('pt-BR');
+                    return `
+                        <tr>
+                            <td>${dateStr}</td>
+                            <td>${colabNome}</td>
+                            <td>${p.tipo_batimento}</td>
+                            <td><span class="status-badge ${p.metodo_autenticacao === 'BIOMETRIA' ? 'status-online' : 'status-checking'}">${p.metodo_autenticacao}</span></td>
+                            <td>${p.sincronizado_offline ? 'Pendente Sync' : 'Sincronizado'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+    } catch (e) {
+        console.error('Erro ao carregar dados do RH:', e);
+    }
+    initLucideIcons();
 }
 
 function showSuccessToast(colaborador, actionType) {

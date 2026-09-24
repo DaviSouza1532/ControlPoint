@@ -27,6 +27,9 @@
             </div>
 
             <div class="status-bar">
+                <button id="open-hr-dashboard-btn" class="btn btn-secondary btn-sm">
+                    <i data-lucide="layout-dashboard"></i> Painel do RH
+                </button>
                 <div id="network-status" class="status-badge status-online">
                     <i data-lucide="wifi" class="badge-icon"></i>
                     <span id="network-text">Rede: Online</span>
@@ -156,6 +159,37 @@
             </div>
         </div>
 
+        <!-- Supervisor Approval Modal (Contingency) -->
+        <div id="supervisor-modal" class="modal-overlay hidden">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <i data-lucide="user-cog" class="modal-icon text-warning"></i>
+                    <h2>Aprovação de Contingência por Supervisor</h2>
+                    <button id="close-supervisor-btn" class="close-btn"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert-box alert-warning">
+                        <strong>Validação do Supervisor Necessária!</strong>
+                        <p id="supervisor-reason-text">Falhas biométricas ou uso de cartão RFID exige liberação do supervisor.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-supervisor-pis">PIS do Supervisor:</label>
+                        <input type="text" id="input-supervisor-pis" class="form-input" placeholder="PIS do supervisor autorizador">
+                    </div>
+                    <div class="form-group">
+                        <label for="input-supervisor-password">Senha do Supervisor:</label>
+                        <input type="password" id="input-supervisor-password" class="form-input" placeholder="Senha do supervisor">
+                    </div>
+                    <div id="supervisor-alert" class="alert-box alert-danger hidden"></div>
+                </div>
+                <div class="modal-footer">
+                    <button id="confirm-supervisor-btn" class="btn btn-primary">
+                        <i data-lucide="check-circle"></i> Autorizar Registro
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Shift Justification Modal -->
         <div id="justification-modal" class="modal-overlay hidden">
             <div class="modal-card">
@@ -244,6 +278,54 @@
                     <button id="finish-ticket-btn" class="btn btn-primary">
                         <i data-lucide="check-circle-2"></i> Concluir
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- HR Dashboard Modal -->
+        <div id="hr-dashboard-modal" class="modal-overlay hidden">
+            <div class="modal-card modal-large">
+                <div class="modal-header">
+                    <i data-lucide="layout-dashboard" class="modal-icon"></i>
+                    <h2>Painel do RH - Auditoria e Relatórios</h2>
+                    <button id="close-hr-dashboard-btn" class="close-btn"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="dashboard-stats-grid">
+                        <div class="stat-card">
+                            <h4>Total Batimentos Hoje</h4>
+                            <p id="stat-total-punches">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Contingências / Cartão</h4>
+                            <p id="stat-contingency-count">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Ocorrências / Justificativas</h4>
+                            <p id="stat-justifications-count">0</p>
+                        </div>
+                    </div>
+
+                    <h3 class="subsection-title"><i data-lucide="list"></i> Registros Recentes</h3>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>Colaborador</th>
+                                    <th>Tipo</th>
+                                    <th>Método</th>
+                                    <th>Status Sync</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hr-punches-tbody">
+                                <tr><td colspan="5">Nenhum registro encontrado.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="close-hr-modal-footer-btn" class="btn btn-secondary">Fechar</button>
                 </div>
             </div>
         </div>
