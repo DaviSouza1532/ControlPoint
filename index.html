@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ControlPoint - Sistema de Controle de Ponto</title>
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Supabase JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Day.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/pt-br.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="brand">
+                <i data-lucide="clock" class="brand-icon"></i>
+                <h1 class="brand-title">ControlPoint</h1>
+                <span class="brand-subtitle">Controle de Ponto Inteligente</span>
+            </div>
+            
+            <div class="status-bar">
+                <button id="open-hr-dashboard-btn" class="btn btn-secondary btn-sm">
+                    <i data-lucide="layout-dashboard"></i> Painel do RH
+                </button>
+                <div id="network-status" class="status-badge status-online">
+                    <i data-lucide="wifi" class="badge-icon"></i>
+                    <span id="network-text">Rede: Online</span>
+                </div>
+                <div id="db-status" class="status-badge status-checking">
+                    <i data-lucide="database" class="badge-icon"></i>
+                    <span id="db-text">Supabase: Verificando...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Layout -->
+        <main class="main-content">
+            <!-- Left Side: Clock & Current Info -->
+            <section class="clock-section card">
+                <div class="clock-display">
+                    <div id="current-time" class="time-text">00:00:00</div>
+                    <div id="current-date" class="date-text">Carregando data...</div>
+                </div>
+
+                <div class="connection-card">
+                    <div class="card-header">
+                        <i data-lucide="activity" class="card-icon"></i>
+                        <h3>Status da Conexão Backend</h3>
+                    </div>
+                    <p id="db-detail-message">Tentando conectar ao banco de dados Supabase...</p>
+                </div>
+            </section>
+
+            <!-- Right Side: Clock-In Options -->
+            <section class="actions-section card">
+                <h2 class="section-title">
+                    <i data-lucide="user-check" class="section-icon"></i>
+                    Registro de Ponto
+                </h2>
+                <p class="section-description">Selecione o tipo de registro antes de prosseguir com a identificação:</p>
+
+                <div class="actions-grid">
+                    <button class="action-btn btn-entrada" data-action="ENTRADA">
+                        <i data-lucide="log-in" class="btn-icon"></i>
+                        <span class="btn-label">Entrada Expediente</span>
+                    </button>
+
+                    <button class="action-btn btn-intervalo-saida" data-action="SAIDA_INTERVALO">
+                        <i data-lucide="coffee" class="btn-icon"></i>
+                        <span class="btn-label">Saída para Intervalo</span>
+                    </button>
+
+                    <button class="action-btn btn-intervalo-retorno" data-action="RETORNO_INTERVALO">
+                        <i data-lucide="rotate-ccw" class="btn-icon"></i>
+                        <span class="btn-label">Retorno do Intervalo</span>
+                    </button>
+
+                    <button class="action-btn btn-saida" data-action="SAIDA_EXPEDIENTE">
+                        <i data-lucide="log-out" class="btn-icon"></i>
+                        <span class="btn-label">Saída Expediente</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Identification Modal (Biometrics & PIS/Password) -->
+        <div id="biometric-modal" class="modal-overlay hidden">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <i data-lucide="shield-check" class="modal-icon"></i>
+                    <h2 id="modal-title">Identificação para Registro</h2>
+                    <button id="close-modal-btn" class="close-btn">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+
+                <!-- Tab Controls -->
+                <div class="modal-tabs">
+                    <button id="tab-biometry-btn" class="modal-tab active-tab">
+                        <i data-lucide="fingerprint"></i> Biometria / Leitor
+                    </button>
+                    <button id="tab-password-btn" class="modal-tab">
+                        <i data-lucide="key-round"></i> PIS / CPF + Senha
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- Tab Content 1: Biometry -->
+                    <div id="tab-biometry-content" class="tab-content">
+                        <div class="select-colaborador-group">
+                            <label for="colaborador-select">Selecione o Colaborador:</label>
+                            <select id="colaborador-select" class="form-select">
+                                <option value="">Carregando colaboradores...</option>
+                            </select>
+                        </div>
+
+                        <div class="biometric-scanner-box">
+                            <div id="scanner-icon-container" class="scanner-icon-wrapper pulse-animation">
+                                <i data-lucide="fingerprint" class="scanner-icon"></i>
+                            </div>
+                            <p id="biometric-status-text">Posicione o dedo no leitor biométrico...</p>
+                        </div>
+                    </div>
+
+                    <!-- Tab Content 2: Password Access -->
+                    <div id="tab-password-content" class="tab-content hidden">
+                        <div class="form-group">
+                            <label for="input-pis">PIS / CPF do Colaborador:</label>
+                            <input type="text" id="input-pis" class="form-input" placeholder="Digite seu PIS ou CPF (ex: 123.45678.90-1)">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="input-password">Senha de Acesso:</label>
+                            <input type="password" id="input-password" class="form-input" placeholder="Digite sua senha de acesso">
+                        </div>
+                        <p class="form-hint"><i data-lucide="info"></i> Para o primeiro acesso em computador, use a senha padrão de cadastro (123456).</p>
+                    </div>
+
+                    <div id="biometric-alert" class="alert-box hidden"></div>
+                </div>
+
+                <div class="modal-footer">
+                    <button id="cancel-biometric-btn" class="btn btn-secondary">Cancelar</button>
+                    <button id="register-passkey-btn" class="btn btn-secondary">
+                        <i data-lucide="key-round"></i> Cadastrar Passkey
+                    </button>
+                    <button id="confirm-biometric-btn" class="btn btn-primary">
+                        <i data-lucide="check"></i> Confirmar Batimento
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Supervisor Approval Modal (Contingency) -->
+        <div id="supervisor-modal" class="modal-overlay hidden">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <i data-lucide="user-cog" class="modal-icon text-warning"></i>
+                    <h2>Aprovação de Contingência por Supervisor</h2>
+                    <button id="close-supervisor-btn" class="close-btn"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert-box alert-warning">
+                        <strong>Validação do Supervisor Necessária!</strong>
+                        <p id="supervisor-reason-text">Falhas biométricas ou uso de cartão RFID exige liberação do supervisor.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-supervisor-pis">PIS do Supervisor:</label>
+                        <input type="text" id="input-supervisor-pis" class="form-input" placeholder="PIS do supervisor autorizador">
+                    </div>
+                    <div class="form-group">
+                        <label for="input-supervisor-password">Senha do Supervisor:</label>
+                        <input type="password" id="input-supervisor-password" class="form-input" placeholder="Senha do supervisor">
+                    </div>
+                    <div id="supervisor-alert" class="alert-box alert-danger hidden"></div>
+                </div>
+                <div class="modal-footer">
+                    <button id="confirm-supervisor-btn" class="btn btn-primary">
+                        <i data-lucide="check-circle"></i> Autorizar Registro
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shift Justification Modal -->
+        <div id="justification-modal" class="modal-overlay hidden">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <i data-lucide="alert-triangle" class="modal-icon text-warning"></i>
+                    <h2>Justificativa de Ocorrência</h2>
+                </div>
+                <div class="modal-body">
+                    <div id="justification-info-box" class="alert-box alert-warning">
+                        <strong>Horário fora da tolerância do turno!</strong>
+                        <p id="justification-reason-text">Atraso ou saída antecipada detectada.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="input-justification-text">Por favor, descreva o motivo:</label>
+                        <textarea id="input-justification-text" class="form-textarea" rows="4" placeholder="Informe a justificativa para o RH..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="submit-justification-btn" class="btn btn-primary">
+                        <i data-lucide="send"></i> Salvar e Registrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Virtual Ticket Modal -->
+        <div id="ticket-modal" class="modal-overlay hidden">
+            <div class="modal-card modal-ticket-card">
+                <div class="modal-header no-print">
+                    <i data-lucide="receipt" class="modal-icon"></i>
+                    <h2>Comprovante de Registro (Ticket Virtual)</h2>
+                    <button id="close-ticket-btn" class="close-btn">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- Ticket Receipt Box -->
+                    <div id="virtual-ticket-content" class="ticket-receipt">
+                        <div class="ticket-header">
+                            <h3 id="ticket-empresa-nome">EMPRESA EXEMPLO S.A.</h3>
+                            <p id="ticket-empresa-cnpj">CNPJ: 00.000.000/0001-00</p>
+                            <p id="ticket-empresa-endereco">Rua Comercial, 100 - Centro</p>
+                            <hr class="ticket-divider">
+                            <h4 class="ticket-title">COMPROVANTE DE REGISTRO DE PONTO</h4>
+                            <hr class="ticket-divider">
+                        </div>
+
+                        <div class="ticket-section">
+                            <p><strong>COLABORADOR:</strong> <span id="ticket-colaborador-nome">---</span></p>
+                            <p><strong>PIS:</strong> <span id="ticket-colaborador-pis">---</span></p>
+                            <p><strong>CARGO:</strong> <span id="ticket-colaborador-cargo">---</span></p>
+                        </div>
+                        <hr class="ticket-divider">
+
+                        <div class="ticket-section">
+                            <p><strong>TIPO REGISTRO:</strong> <span id="ticket-tipo-batimento">---</span></p>
+                            <p><strong>DATA / HORA:</strong> <span id="ticket-timestamp">---</span></p>
+                            <p><strong>MÉTODO AUTH:</strong> <span id="ticket-metodo">---</span></p>
+                        </div>
+                        <hr class="ticket-divider">
+
+                        <div class="ticket-section">
+                            <p><strong>REGISTROS DO DIA:</strong></p>
+                            <ul id="ticket-today-punches-list" class="ticket-punches-list">
+                                <li>Sem registros anteriores</li>
+                            </ul>
+                        </div>
+                        <hr class="ticket-divider">
+
+                        <div class="ticket-footer">
+                            <p class="hash-label">HASH DE AUTENTICAÇÃO:</p>
+                            <p id="ticket-hash" class="hash-code">00000000000000000000000000000000</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer no-print">
+                    <button id="print-ticket-btn" class="btn btn-secondary">
+                        <i data-lucide="printer"></i> Imprimir Ticket
+                    </button>
+                    <button id="email-ticket-btn" class="btn btn-secondary">
+                        <i data-lucide="mail"></i> Enviar E-mail
+                    </button>
+                    <button id="finish-ticket-btn" class="btn btn-primary">
+                        <i data-lucide="check-circle-2"></i> Concluir
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- HR Dashboard Modal -->
+        <div id="hr-dashboard-modal" class="modal-overlay hidden">
+            <div class="modal-card modal-large">
+                <div class="modal-header">
+                    <i data-lucide="layout-dashboard" class="modal-icon"></i>
+                    <h2>Painel do RH - Auditoria e Relatórios</h2>
+                    <button id="close-hr-dashboard-btn" class="close-btn"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="dashboard-stats-grid">
+                        <div class="stat-card">
+                            <h4>Total Batimentos Hoje</h4>
+                            <p id="stat-total-punches">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Contingências / Cartão</h4>
+                            <p id="stat-contingency-count">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Ocorrências / Justificativas</h4>
+                            <p id="stat-justifications-count">0</p>
+                        </div>
+                    </div>
+
+                    <h3 class="subsection-title"><i data-lucide="list"></i> Registros Recentes</h3>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>Colaborador</th>
+                                    <th>Tipo</th>
+                                    <th>Método</th>
+                                    <th>Status Sync</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hr-punches-tbody">
+                                <tr><td colspan="5">Nenhum registro encontrado.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="close-hr-modal-footer-btn" class="btn btn-secondary">Fechar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Toast Notification -->
+        <div id="success-toast" class="toast-overlay hidden">
+            <div class="toast-card">
+                <i data-lucide="check-circle-2" class="toast-icon"></i>
+                <div class="toast-content">
+                    <h3 id="toast-title">Ponto Registrado com Sucesso!</h3>
+                    <p id="toast-colaborador">Colaborador: ---</p>
+                    <p id="toast-time">Horário: ---</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-info">
+                <span><i data-lucide="monitor" class="footer-icon"></i> Interface Otimizada para Tablet e Desktop</span>
+                <span>•</span>
+                <span>PWA Offline-First</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/supabaseClient.js"></script>
+    <script src="js/biometrics.js"></script>
+    <script src="js/offlineStore.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registrado com sucesso:', reg.scope))
+                    .catch(err => console.warn('Falha ao registrar Service Worker:', err));
+            });
+        }
+    </script>
+</body>
+</html>
